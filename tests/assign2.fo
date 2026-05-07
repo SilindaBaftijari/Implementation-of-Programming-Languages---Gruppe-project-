@@ -1,0 +1,27 @@
+fun int mul(int x, int y) = 
+    if x == 0
+    then 0
+    else if x < 0 
+    then 0 - mul(0-x, y)
+    else y + mul(x-1, y)
+
+fun int readInt(int d) = read(int)
+
+fun int add(int x, int y) = x + y
+
+fun int main() =
+  let n = read(int) in
+  if 0 < n
+  then
+    let arr = map(readInt, iota(n)) in
+    let diffs = map(fn int (int i) =>
+                      if i == 0
+                      then arr[0] - arr[n-1]
+                      else arr[i] - arr[i-1],
+                    iota(n)) in
+    let squares = map(fn int (int x) => mul(x, x), diffs) in
+    let result = reduce(add, 0, squares) in
+    write(result)
+  else
+    let ignored = write("Incorrect Input!") in
+    0

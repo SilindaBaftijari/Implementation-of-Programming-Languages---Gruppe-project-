@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////
-// TODO: project task 1 
+// TODO: project task 1 DONE
 //   implement lexer tokens for the new operators: 
 //   multiplication (*), division (/), numerical negation (~), 
 //   logical negation (not), logical and (&&), logical or (||),
 //   boolean literals (true, false), semicolon (;)
 //
 //
-// TODO: project task 2 
+// TODO: project task 2 DONE
 //   implement lexer tokens (keywords) for replicate, filter, scan 
 //
 //
@@ -70,6 +70,12 @@ let keyword (s, pos) =
        | "reduce"       -> Parser.REDUCE pos
        | "read"         -> Parser.READ pos
        | "write"        -> Parser.WRITE pos
+       | "not"          -> Parser.NOT pos       (* task 1: logical negation *)
+       | "true"         -> Parser.TRUE pos      (* task 1: boolean literal true *)
+       | "false"        -> Parser.FALSE pos     (* task 1: boolean literal false *)
+       | "replicate"    -> Parser.REPLICATE pos (* task 2: replicate array *)
+       | "filter"       -> Parser.FILTER pos    (* task 2: filter array *)
+       | "scan"         -> Parser.SCAN pos      (* task 2: scan array *)
        | _              -> Parser.ID (s, pos)
 }
 
@@ -100,18 +106,26 @@ rule Token = parse
                             let str1 = str0.Substring (1, (String.length str0) - 2)
                             Parser.STRINGLIT (AbSyn.fromCString str1, getPos lexbuf)
                           }
-  | '+'                   { Parser.PLUS   (getPos lexbuf) }
-  | '-'                   { Parser.MINUS  (getPos lexbuf) }
-  | "=>"                  { Parser.ARROW  (getPos lexbuf) }
-  | "=="                  { Parser.DEQ    (getPos lexbuf) }
-  | '='                   { Parser.EQ     (getPos lexbuf) }
-  | '<'                   { Parser.LTH    (getPos lexbuf) }
-  | '('                   { Parser.LPAR   (getPos lexbuf) }
-  | ')'                   { Parser.RPAR   (getPos lexbuf) }
-  | '['                   { Parser.LBRACKET (getPos lexbuf) }
-  | ']'                   { Parser.RBRACKET (getPos lexbuf) }
-  | '{'                   { Parser.LCURLY (getPos lexbuf) }
-  | '}'                   { Parser.RCURLY (getPos lexbuf) }
-  | ','                   { Parser.COMMA  (getPos lexbuf) }
-  | eof                   { Parser.EOF    (getPos lexbuf) }
+  | '+'                   { Parser.PLUS      (getPos lexbuf) }
+  | '-'                   { Parser.MINUS     (getPos lexbuf) }
+  | '*'                   { Parser.TIMES     (getPos lexbuf) (* task 1: multiplication *) }
+  | '/'                   { Parser.DIVIDE    (getPos lexbuf) (* task 1: division *) }
+  | '~'                   { Parser.NEGATE    (getPos lexbuf) (* task 1: numerical negation (~) *) }
+  | "&&"                  { Parser.AND       (getPos lexbuf) (* task 1: logical and (&&) *) }
+  | "||"                  { Parser.OR        (getPos lexbuf) (* task 1: logical or (||) *) }
+  | ';'                   { Parser.SEMICOLON (getPos lexbuf) (* task 1: semicolon (;) *) }
+  | "<-"                  { Parser.LARROW    (getPos lexbuf) (* task 4: generator binding in comprehension (comprehension.fo) *) }
+  | '|'                   { Parser.PIPE      (getPos lexbuf) (* task 4: separator in comprehension (comprehension.fo) *) }
+  | "=>"                  { Parser.ARROW     (getPos lexbuf) }
+  | "=="                  { Parser.DEQ       (getPos lexbuf) }
+  | '='                   { Parser.EQ        (getPos lexbuf) }
+  | '<'                   { Parser.LTH       (getPos lexbuf) }
+  | '('                   { Parser.LPAR      (getPos lexbuf) }
+  | ')'                   { Parser.RPAR      (getPos lexbuf) }
+  | '['                   { Parser.LBRACKET  (getPos lexbuf) }
+  | ']'                   { Parser.RBRACKET  (getPos lexbuf) }
+  | '{'                   { Parser.LCURLY    (getPos lexbuf) }
+  | '}'                   { Parser.RCURLY    (getPos lexbuf) }
+  | ','                   { Parser.COMMA     (getPos lexbuf) }
+  | eof                   { Parser.EOF       (getPos lexbuf) }
   | _                     { lexerError lexbuf "Illegal symbol in input" }

@@ -8,6 +8,8 @@ type token =
   | SEMICOLON of (Position)
   | EQ of (Position)
   | ARROW of (Position)
+  | LARROW of (Position)
+  | PIPE of (Position)
   | LPAR of (Position)
   | RPAR of (Position)
   | LBRACKET of (Position)
@@ -22,6 +24,9 @@ type token =
   | READ of (Position)
   | REDUCE of (Position)
   | WRITE of (Position)
+  | REPLICATE of (Position)
+  | FILTER of (Position)
+  | SCAN of (Position)
   | BOOL of (Position)
   | CHAR of (Position)
   | ELSE of (Position)
@@ -33,10 +38,17 @@ type token =
   | LET of (Position)
   | THEN of (Position)
   | TRUE of (Position)
+  | FALSE of (Position)
+  | NOT of (Position)
   | ID of (string * Position)
   | STRINGLIT of (string * Position)
   | CHARLIT of (char * Position)
   | NUM of (int * Position)
+  | TIMES of (Position)
+  | DIVIDE of (Position)
+  | AND of (Position)
+  | OR of (Position)
+  | NEGATE of (Position)
 type tokenId = 
     | TOKEN_LCURLY
     | TOKEN_RCURLY
@@ -45,6 +57,8 @@ type tokenId =
     | TOKEN_SEMICOLON
     | TOKEN_EQ
     | TOKEN_ARROW
+    | TOKEN_LARROW
+    | TOKEN_PIPE
     | TOKEN_LPAR
     | TOKEN_RPAR
     | TOKEN_LBRACKET
@@ -59,6 +73,9 @@ type tokenId =
     | TOKEN_READ
     | TOKEN_REDUCE
     | TOKEN_WRITE
+    | TOKEN_REPLICATE
+    | TOKEN_FILTER
+    | TOKEN_SCAN
     | TOKEN_BOOL
     | TOKEN_CHAR
     | TOKEN_ELSE
@@ -70,10 +87,17 @@ type tokenId =
     | TOKEN_LET
     | TOKEN_THEN
     | TOKEN_TRUE
+    | TOKEN_FALSE
+    | TOKEN_NOT
     | TOKEN_ID
     | TOKEN_STRINGLIT
     | TOKEN_CHARLIT
     | TOKEN_NUM
+    | TOKEN_TIMES
+    | TOKEN_DIVIDE
+    | TOKEN_AND
+    | TOKEN_OR
+    | TOKEN_NEGATE
     | TOKEN_end_of_input
     | TOKEN_error
 type nonTerminalId = 
@@ -83,6 +107,7 @@ type nonTerminalId =
     | NONTERM_Fun
     | NONTERM_Type
     | NONTERM_Params
+    | NONTERM_Decs
     | NONTERM_Exp
     | NONTERM_Exps
     | NONTERM_FunArg

@@ -1,4 +1,3 @@
-
 %{
 
 let p0 = (0,0)
@@ -36,22 +35,31 @@ let parse_error_rich =
 //   TODO: project task 4: array comprehension 
 //////////////////////////////////////////////////////////////////////
 
+// keywords
+%token <Position> TIMES DIVIDE AND OR NEGATE // added this for task for task 1
 //information-carrying tokens
 %token <int * Position> NUM
 %token <char * Position> CHARLIT
 %token <string * Position> ID STRINGLIT
 //keywords
-%token <Position> BOOL CHAR ELSE FN FUN IF IN INT LET THEN TRUE
+%token <Position> BOOL CHAR ELSE FN FUN IF IN INT LET THEN TRUE FALSE NOT
+// Add to symbols
+
 //specials
-%token <Position> IOTA LENGTH MAP READ REDUCE WRITE
+%token <Position> IOTA LENGTH MAP READ REDUCE WRITE REPLICATE FILTER SCAN
 //symbols
 %token <Position> MINUS PLUS DEQ LTH
 %token <Position> COMMA SEMICOLON EQ ARROW LPAR RPAR LBRACKET RBRACKET
 %token <Position> LCURLY RCURLY EOF
 
 %nonassoc ELSE IN
+%nonassoc NOT         
+%left OR              
+%left AND
 %left DEQ LTH
 %left PLUS MINUS
+%left TIMES DIVIDE    
+%nonassoc NEGATE  
 
 %start Prog
 %type <AbSyn.UntypedProg> Prog
@@ -62,6 +70,7 @@ let parse_error_rich =
 %type <AbSyn.UntypedExp list> Exps
 %type <AbSyn.UntypedFunArg> FunArg
 // TODO: Task 1(b): add any new nonterminals here
+%type <AbSyn.UntypedDec list> Decs
 
 %%
 
@@ -94,6 +103,11 @@ Params : Type ID COMMA Params
 //       add grammer rules for the new expressions
 ///////////////////////////////////////////////////////
 
+// Task 1(b): Multiple declarations separated by semicolons
+Decs : ID EQ Exp SEMICOLON Decs { Dec (fst $1, $3, $2) :: $5 }
+     | ID EQ Exp                { [Dec (fst $1, $3, $2)] }
+;
+
 Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
     | CHARLIT        { Constant (CharVal (fst $1), snd $1) }
     | ID             { Var $1 }
@@ -101,6 +115,14 @@ Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
     | LCURLY Exps RCURLY
                      { ArrayLit ($2, (), $1) }
     | Exp PLUS  Exp  { Plus ($1, $3, $2) }
+    | Exp TIMES Exp       { Times ($1, $3, $2) }
+    | Exp DIVIDE Exp      { Divide ($1, $3, $2) }
+    | Exp AND Exp         { And ($1, $3, $2) }
+    | Exp OR Exp          { Or ($1, $3, $2) }
+    | NOT Exp             { Not ($2, $1) }
+    | NEGATE Exp          { Negate ($2, $1) }
+    | TRUE                { Constant (BoolVal true, $1) }
+    | FALSE               { Constant (BoolVal false, $1) }
     | Exp MINUS Exp  { Minus($1, $3, $2) }
     | Exp DEQ   Exp  { Equal($1, $3, $2) }
     | Exp LTH   Exp  { Less ($1, $3, $2) }
@@ -123,8 +145,8 @@ Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
                      { Reduce ($3, $5, $7, (), $1) }
     | LPAR Exp RPAR  { $2 }
     // TODO: task 1(b): replace this with a more general production
-    | LET ID EQ Exp IN Exp
-                     { Let (Dec (fst $2, $4, $3), $6, $1) }
+    | LET Decs IN Exp
+                     { List.foldBack (fun dec acc -> Let (dec, acc, $1)) $2 $4 }
     | ID LBRACKET Exp RBRACKET
                      { Index (fst $1, $3, (), $2) }
 ;

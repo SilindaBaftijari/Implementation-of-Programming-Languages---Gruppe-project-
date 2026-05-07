@@ -136,28 +136,59 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
           | (IntVal n1, IntVal n2) -> IntVal (n1-n2)
           | (IntVal _, _) -> reportWrongType "right operand of -" Int res2 (expPos e2)
           | (_, _) -> reportWrongType "left operand of -" Int res1 (expPos e1)
-  (* TODO: project task 1:
-     Look in `AbSyn.fs` for the arguments of the `Times`
-     (`Divide`,...) expression constructors.
-        Implementation similar to the cases of Plus/Minus.
-        Try to pattern match the code above.
-        For `Divide`, remember to check for attempts to divide by zero.
-        For `And`/`Or`: make sure to implement the short-circuit semantics,
-        e.g., `And (e1, e2, pos)` should not evaluate `e2` if `e1` already
-              evaluates to false.
-  *)
-  | Times(_, _, _) ->
-        failwith "Unimplemented interpretation of multiplication"
-  | Divide(_, _, _) ->
-        failwith "Unimplemented interpretation of division"
-  | And (_, _, _) ->
-        failwith "Unimplemented interpretation of &&"
-  | Or (_, _, _) ->
-        failwith "Unimplemented interpretation of ||"
-  | Not(_, _) ->
-        failwith "Unimplemented interpretation of not"
-  | Negate(_, _) ->
-        failwith "Unimplemented interpretation of negate"
+  
+  (* TASK 1: Arithmetic and logical operations *)
+  | Times(e1, e2, pos) ->
+        let res1 = evalExp(e1, vtab, ftab)
+        let res2 = evalExp(e2, vtab, ftab)
+        match (res1, res2) with
+          | (IntVal n1, IntVal n2) -> IntVal (n1 * n2)
+          | (IntVal _, _) -> reportWrongType "right operand of *" Int res2 (expPos e2)
+          | (_, _) -> reportWrongType "left operand of *" Int res1 (expPos e1)
+          
+  | Divide(e1, e2, pos) ->
+        let res1 = evalExp(e1, vtab, ftab)
+        let res2 = evalExp(e2, vtab, ftab)
+        match (res1, res2) with
+          | (_, IntVal 0) -> raise (MyError("Division by zero", pos))
+          | (IntVal n1, IntVal n2) -> IntVal (n1 / n2)
+          | (IntVal _, _) -> reportWrongType "right operand of /" Int res2 (expPos e2)
+          | (_, _) -> reportWrongType "left operand of /" Int res1 (expPos e1)
+          
+  | Negate(e, pos) ->
+        let res = evalExp(e, vtab, ftab)
+        match res with
+          | IntVal n -> IntVal (-n)
+          | _ -> reportWrongType "operand of ~" Int res (expPos e)
+          
+  | Not(e, pos) ->
+        let res = evalExp(e, vtab, ftab)
+        match res with
+          | BoolVal b -> BoolVal (not b)
+          | _ -> reportWrongType "operand of !" Bool res (expPos e)
+          
+  | And(e1, e2, pos) ->
+        let res1 = evalExp(e1, vtab, ftab)
+        match res1 with
+          | BoolVal false -> BoolVal false  (* Short-circuit: false && anything = false *)
+          | BoolVal true -> 
+              let res2 = evalExp(e2, vtab, ftab)
+              match res2 with
+                | BoolVal b -> BoolVal b
+                | _ -> reportWrongType "right operand of &&" Bool res2 (expPos e2)
+          | _ -> reportWrongType "left operand of &&" Bool res1 (expPos e1)
+          
+  | Or(e1, e2, pos) ->
+        let res1 = evalExp(e1, vtab, ftab)
+        match res1 with
+          | BoolVal true -> BoolVal true   (* Short-circuit: true || anything = true *)
+          | BoolVal false ->
+              let res2 = evalExp(e2, vtab, ftab)
+              match res2 with
+                | BoolVal b -> BoolVal b
+                | _ -> reportWrongType "right operand of ||" Bool res2 (expPos e2)
+          | _ -> reportWrongType "left operand of ||" Bool res1 (expPos e1)
+
   | Equal(e1, e2, pos) ->
         let r1 = evalExp(e1, vtab, ftab)
         let r2 = evalExp(e2, vtab, ftab)
@@ -235,35 +266,46 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
           | ArrayVal (lst,tp1) ->
                List.fold (fun acc x -> evalFunArg (farg, vtab, ftab, pos, [acc;x])) nel lst
           | otherwise -> reportNonArray "3rd argument of \"reduce\"" arr pos
-  (* TODO project task 2: `replicate(n, a)`
-     Look in `AbSyn.fs` for the arguments of the `Replicate`
-     (`Map`,`Scan`) expression constructors.
-       - evaluate `n` then evaluate `a`,
-       - check that `n` evaluates to an integer value >= 0
-       - If so then create an array containing `n` replicas of
-         the value of `a`; otherwise raise an error (containing
-         a meaningful message).
-  *)
-  | Replicate (_, _, _, _) ->
-        failwith "Unimplemented interpretation of replicate"
+  
+  (* TASK 2: Replicate, Filter, and Scan *)
+  | Replicate (e1, e2, t, pos) ->
+        let countVal = evalExp(e1, vtab, ftab)
+        let elemVal = evalExp(e2, vtab, ftab)
+        match countVal with
+          | IntVal n when n >= 0 ->
+              ArrayVal (List.init n (fun _ -> elemVal), valueType elemVal)
+          | IntVal n ->
+              raise (MyError(sprintf "replicate: expected non-negative count, got %d" n, pos))
+          | _ ->
+              reportWrongType "1st argument of replicate" Int countVal pos
 
-  (* TODO project task 2: `filter(p, arr)`
-       pattern match the implementation of map:
-       - evaluate `arr` and check that the (value) result corresponds to an array;
-       - use F# `List.filter` to keep only the elements `a` of `arr` which succeed
-         under predicate `p`, i.e., `p(a) = true` (but remember to check
-         that the return value is a boolean at all);
-       - create an `ArrayVal` from the (list) result of the previous step.
-  *)
-  | Filter (_, _, _, _) ->
-        failwith "Unimplemented interpretation of filter"
+  | Filter (farg, arrexp, t, pos) ->
+        let arr = evalExp(arrexp, vtab, ftab)
+        match arr with
+          | ArrayVal (lst, elemType) ->
+              let filtered =
+                  List.filter (fun x ->
+                      let res = evalFunArg (farg, vtab, ftab, pos, [x])
+                      match res with
+                        | BoolVal b -> b
+                        | _ -> reportWrongType "return value of predicate in filter" Bool res pos
+                  ) lst
+              ArrayVal (filtered, elemType)
+          | _ -> reportNonArray "2nd argument of filter" arr pos
 
-  (* TODO project task 2: `scan(f, ne, arr)`
-     Implementation similar to reduce, except that it produces an array
-     of the same type and length to the input array `arr`.
-  *)
-  | Scan (_, _, _, _, _) ->
-        failwith "Unimplemented interpretation of scan"
+  | Scan (farg, ne, arrexp, t, pos) ->
+        let acc = evalExp(ne, vtab, ftab)
+        let arr = evalExp(arrexp, vtab, ftab)
+        match arr with
+          | ArrayVal (lst, _) ->
+              let scanned =
+                  let folder (acc, result) x =
+                      let next = evalFunArg (farg, vtab, ftab, pos, [acc; x])
+                      (next, result @ [next])
+                  let (_, resultList) = List.fold folder (acc, []) lst
+                  resultList
+              ArrayVal (scanned, valueType acc)
+          | _ -> reportNonArray "3rd argument of scan" arr pos
 
   | Read (t,p) ->
         let str = Console.ReadLine()

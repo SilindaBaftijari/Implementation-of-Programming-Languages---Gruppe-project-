@@ -299,11 +299,21 @@ and checkExp  (ftab : FunTable)
         - check that `n` has integer type
         - assuming `a` is of type `t` the result type
           of replicate is `[t]`
-    *)
-    | Replicate (_, _, _, _) ->
-        failwith "Unimplemented type check of replicate"
 
-    (* TODO project task 2: Hint for `filter(f, arr)`
+          Pattern matching with IOTA 
+    *)
+    | Replicate (n_exp, a_exp, _, pos) ->
+        // Check n → must be Int
+        let (n_type, n_dec) = checkExp ftab vtab n_exp
+        if n_type <> Int then
+            reportTypeWrong "first argument of replicate" Int n_type pos
+        // Check a → can be anything, call the type a_type
+        let (a_type, a_dec) = checkExp ftab vtab a_exp
+        // Return type is Array a_type, and fill in the inferred type
+        (Array a_type, Replicate (n_dec, a_dec, a_type, pos)) 
+
+
+    (* TODO project task 2: Hint for `filter(f, arr)`              
         Look into the type-checking lecture slides for the type rule of `map`
         and think of what needs to be changed for filter (?)
         Use `checkFunArg` to get the signature of the function argument `f`.
@@ -311,18 +321,62 @@ and checkExp  (ftab : FunTable)
             - `f` has type `ta -> Bool`
             - `arr` should be of type `[ta]`
             - the result of filter should have type `[ta]`
+
+            Pattern mathing with MAP
     *)
-    | Filter (_, _, _, _) ->
-        failwith "Unimplemented type check of filter"
+    | Filter (f, arr_exp, _, pos) ->
+        let (arr_type, arr_dec) = checkExp ftab vtab arr_exp
+        let elem_type =
+            match arr_type with
+            | Array t -> t
+            | _ -> reportTypeWrongKind "second argument of filter" "array" arr_type pos
+        let (f', f_res_type, f_arg_type) =
+            match checkFunArg ftab vtab pos f with
+            | (f', res, [a1]) -> (f', res, a1)
+            | (_, res, args) ->
+                reportArityWrong "first argument of filter" 1 (args,res) pos
+        if elem_type <> f_arg_type then
+            reportTypesDifferent "function-argument and array-element types in filter"
+                                f_arg_type elem_type pos
+        if f_res_type <> Bool then
+            reportTypeWrong "return type of function in filter" Bool f_res_type pos
+        (Array elem_type, Filter (f', arr_dec, elem_type, pos))
+  
 
     (* TODO project task 2: `scan(f, ne, arr)`
         Hint: Implementation is very similar to `reduce(f, ne, arr)`.
               (The difference between `scan` and `reduce` is that
               scan's return type is the same as the type of `arr`,
               while reduce's return type is that of an element of `arr`).
+
+              Pattern Matching with REDUCE
     *)
-    | Scan (_, _, _, _, _) ->
-        failwith "Unimplemented type check of scan"
+    | Scan (f, e_exp, ne_exp, _, pos) ->
+        let (e_type  , e_dec  ) = checkExp ftab vtab e_exp
+        let (arr_type, ne_dec) = checkExp ftab vtab ne_exp
+        let elem_type =
+            match arr_type with
+              | Array t -> t
+              | _ -> reportTypeWrongKind "third argument of scan" "array" arr_type pos
+        let (f', f_argres_type) =
+            match checkFunArg ftab vtab pos f with
+              | (f', res, [a1; a2]) ->
+                  if a1 <> a2 then
+                     reportTypesDifferent "argument types of operation in scan"
+                                          a1 a2 pos
+                  if res <> a1 then
+                     reportTypesDifferent "argument and return type of operation in scan"
+                                          a1 res pos
+                  (f', res)
+              | (_, res, args) ->
+                  reportArityWrong "operation in scan" 2 (args,res) pos
+        if elem_type <> f_argres_type then
+          reportTypesDifferent "operation and array-element types in scan"
+                               f_argres_type elem_type pos
+        if e_type <> f_argres_type then
+          reportTypesDifferent "operation and start-element types in scan"
+                               f_argres_type e_type pos
+        (Array f_argres_type, Scan (f', e_dec, ne_dec, elem_type, pos))
 
 and checkFunArg  (ftab : FunTable)
                  (vtab : VarTable)
@@ -350,48 +404,4 @@ and checkFunWithVtable  (ftab : FunTable)
                         (pos  : Position)
                         (fdec : UntypedFunDec)
                       : TypedFunDec =
-    let (FunDec (fname, rettype, parms, body, funpos)) = fdec
-    (* Expand vtable by adding the parameters to vtab. *)
-    let addParam ptable (Param (pname, ty)) =
-            match SymTab.lookup pname ptable with
-              | Some _ -> reportOther ("Multiple parameters named " + pname)
-                                      funpos
-              | None   -> SymTab.bind pname ty ptable
-    let paramtable = List.fold addParam (SymTab.empty()) parms
-    let vtab' = SymTab.combine paramtable vtab
-    let (body_type, body') = checkExp ftab vtab' body
-    if body_type = rettype
-    then (FunDec (fname, rettype, parms, body', pos))
-    else reportTypeWrong "function body" rettype body_type funpos
-
-
-(* Convert a funDec into the (fname, ([arg types], result type),
-   pos) entries that the function table, ftab, consists of, and
-   update the function table with that entry. *)
-let updateFunctionTable  (ftab   : FunTable)
-                         (fundec : UntypedFunDec)
-                       : FunTable =
-    let (FunDec (fname, ret_type, args, _, pos)) = fundec
-    let arg_types = List.map (fun (Param (_, ty)) -> ty) args
-    match SymTab.lookup fname ftab with
-      | Some (_, _, old_pos) -> reportOther ("Duplicate function " + fname) pos
-      | None -> SymTab.bind fname (ret_type, arg_types, pos) ftab
-
-(* Functions are guaranteed by syntax to have a known declared type.  This
-   type is checked against the type of the function body, taking into
-   account declared argument types and types of other functions called.
- *)
-let checkFun  (ftab   : FunTable)
-              (fundec : UntypedFunDec)
-            : TypedFunDec =
-    let (FunDec (_, _, _, _, pos)) = fundec
-    checkFunWithVtable ftab (SymTab.empty()) pos fundec
-
-let checkProg (funDecs : UntypedFunDec list) : TypedFunDec list =
-    let ftab = List.fold updateFunctionTable initFunctionTable funDecs
-    let decorated_funDecs = List.map (checkFun ftab) funDecs
-    match SymTab.lookup "main" ftab with
-      | None         -> reportOther "No main function defined" (0,0)
-      | Some (_, [], _) -> decorated_funDecs  (* all fine! *)
-      | Some (ret_type, args, mainpos) ->
-        reportArityWrong "declaration of main" 0 (args,ret_type) mainpos
+    let (FunDec (fname, ret

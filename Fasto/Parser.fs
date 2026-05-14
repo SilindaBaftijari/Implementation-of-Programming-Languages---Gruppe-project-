@@ -997,4 +997,114 @@ let _fsyacc_reductions = lazy [|
                 (
                    (
 # 155 "Parser.fsp"
-                                            List.foldBack (fun dec acc ->
+                                            List.foldBack (fun dec acc -> Let (dec, acc, _1)) _2 _4 
+                   )
+# 155 "Parser.fsp"
+                 : AbSyn.UntypedExp));
+# 1004 "Parser.fs"
+        (fun (parseState : FSharp.Text.Parsing.IParseState) ->
+            let _1 = parseState.GetInput(1) :?> string * Position in
+            let _2 = parseState.GetInput(2) :?> Position in
+            let _3 = parseState.GetInput(3) :?> AbSyn.UntypedExp in
+            let _4 = parseState.GetInput(4) :?> Position in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 157 "Parser.fsp"
+                                            Index (fst _1, _3, (), _2) 
+                   )
+# 157 "Parser.fsp"
+                 : AbSyn.UntypedExp));
+# 1018 "Parser.fs"
+        (fun (parseState : FSharp.Text.Parsing.IParseState) ->
+            let _1 = parseState.GetInput(1) :?> AbSyn.UntypedExp in
+            let _2 = parseState.GetInput(2) :?> Position in
+            let _3 = parseState.GetInput(3) :?> AbSyn.UntypedExp list in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 160 "Parser.fsp"
+                                             _1 :: _3 
+                   )
+# 160 "Parser.fsp"
+                 : AbSyn.UntypedExp list));
+# 1031 "Parser.fs"
+        (fun (parseState : FSharp.Text.Parsing.IParseState) ->
+            let _1 = parseState.GetInput(1) :?> AbSyn.UntypedExp in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 161 "Parser.fsp"
+                                             _1 :: [] 
+                   )
+# 161 "Parser.fsp"
+                 : AbSyn.UntypedExp list));
+# 1042 "Parser.fs"
+        (fun (parseState : FSharp.Text.Parsing.IParseState) ->
+            let _1 = parseState.GetInput(1) :?> string * Position in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 164 "Parser.fsp"
+                                      FunName (fst _1 ) 
+                   )
+# 164 "Parser.fsp"
+                 : AbSyn.UntypedFunArg));
+# 1053 "Parser.fs"
+        (fun (parseState : FSharp.Text.Parsing.IParseState) ->
+            let _1 = parseState.GetInput(1) :?> Position in
+            let _2 = parseState.GetInput(2) :?> AbSyn.Type in
+            let _3 = parseState.GetInput(3) :?> Position in
+            let _4 = parseState.GetInput(4) :?> Position in
+            let _5 = parseState.GetInput(5) :?> Position in
+            let _6 = parseState.GetInput(6) :?> AbSyn.UntypedExp in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 166 "Parser.fsp"
+                                      Lambda (_2, [], _6, _1) 
+                   )
+# 166 "Parser.fsp"
+                 : AbSyn.UntypedFunArg));
+# 1069 "Parser.fs"
+        (fun (parseState : FSharp.Text.Parsing.IParseState) ->
+            let _1 = parseState.GetInput(1) :?> Position in
+            let _2 = parseState.GetInput(2) :?> AbSyn.Type in
+            let _3 = parseState.GetInput(3) :?> Position in
+            let _4 = parseState.GetInput(4) :?> 'gentype_Params in
+            let _5 = parseState.GetInput(5) :?> Position in
+            let _6 = parseState.GetInput(6) :?> Position in
+            let _7 = parseState.GetInput(7) :?> AbSyn.UntypedExp in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 168 "Parser.fsp"
+                                      Lambda (_2, _4, _7, _1) 
+                   )
+# 168 "Parser.fsp"
+                 : AbSyn.UntypedFunArg));
+|]
+# 1087 "Parser.fs"
+let tables : FSharp.Text.Parsing.Tables<_> = 
+  { reductions = _fsyacc_reductions.Value;
+    endOfInputTag = _fsyacc_endOfInputTag;
+    tagOfToken = tagOfToken;
+    dataOfToken = _fsyacc_dataOfToken; 
+    actionTableElements = _fsyacc_actionTableElements;
+    actionTableRowOffsets = _fsyacc_actionTableRowOffsets;
+    stateToProdIdxsTableElements = _fsyacc_stateToProdIdxsTableElements;
+    stateToProdIdxsTableRowOffsets = _fsyacc_stateToProdIdxsTableRowOffsets;
+    reductionSymbolCounts = _fsyacc_reductionSymbolCounts;
+    immediateActions = _fsyacc_immediateActions;
+    gotos = _fsyacc_gotos;
+    sparseGotoTableRowOffsets = _fsyacc_sparseGotoTableRowOffsets;
+    tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;
+    parseError = (fun (ctxt:FSharp.Text.Parsing.ParseErrorContext<_>) -> 
+                              match parse_error_rich with 
+                              | Some f -> f ctxt
+                              | None -> parse_error ctxt.Message);
+    numTerminals = 51;
+    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }
+let engine lexer lexbuf startState = tables.Interpret(lexer, lexbuf, startState)
+let Prog lexer lexbuf : AbSyn.UntypedProg =
+    engine lexer lexbuf 0 :?> _

@@ -404,4 +404,49 @@ and checkFunWithVtable  (ftab : FunTable)
                         (pos  : Position)
                         (fdec : UntypedFunDec)
                       : TypedFunDec =
-    let (FunDec (fname, ret
+    let (FunDec (fname, rettype, parms, body, funpos)) = fdec
+    (* Expand vtable by adding the parameters to vtab. *)
+    let addParam ptable (Param (pname, ty)) =
+            match SymTab.lookup pname ptable with
+              | Some _ -> reportOther ("Multiple parameters named " + pname)
+                                      funpos
+              | None   -> SymTab.bind pname ty ptable
+    let paramtable = List.fold addParam (SymTab.empty()) parms
+    let vtab' = SymTab.combine paramtable vtab
+    let (body_type, body') = checkExp ftab vtab' body
+    if body_type = rettype
+    then (FunDec (fname, rettype, parms, body', pos))
+    else reportTypeWrong "function body" rettype body_type funpos
+
+
+(* Convert a funDec into the (fname, ([arg types], result type),
+   pos) entries that the function table, ftab, consists of, and
+   update the function table with that entry. *)
+let updateFunctionTable  (ftab   : FunTable)
+                         (fundec : UntypedFunDec)
+                       : FunTable =
+    let (FunDec (fname, ret_type, args, _, pos)) = fundec
+    let arg_types = List.map (fun (Param (_, ty)) -> ty) args
+    match SymTab.lookup fname ftab with
+      | Some (_, _, old_pos) -> reportOther ("Duplicate function " + fname) pos
+      | None -> SymTab.bind fname (ret_type, arg_types, pos) ftab
+
+(* Functions are guaranteed by syntax to have a known declared type.  This
+   type is checked against the type of the function body, taking into
+   account declared argument types and types of other functions called.
+ *)
+let checkFun  (ftab   : FunTable)
+              (fundec : UntypedFunDec)
+            : TypedFunDec =
+    let (FunDec (_, _, _, _, pos)) = fundec
+    checkFunWithVtable ftab (SymTab.empty()) pos fundec
+
+let checkProg (funDecs : UntypedFunDec list) : TypedFunDec list =
+    let ftab = List.fold updateFunctionTable initFunctionTable funDecs
+    let decorated_funDecs = List.map (checkFun ftab) funDecs
+    match SymTab.lookup "main" ftab with
+      | None         -> reportOther "No main function defined" (0,0)
+      | Some (_, [], _) -> decorated_funDecs  (* all fine! *)
+      | Some (ret_type, args, mainpos) ->
+        reportArityWrong "declaration of main" 0 (args,ret_type) mainpos
+

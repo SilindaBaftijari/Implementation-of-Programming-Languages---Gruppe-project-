@@ -113,8 +113,6 @@ rule Token = parse
   | "&&"                  { Parser.AND       (getPos lexbuf) (* task 1: logical and (&&) *) }
   | "||"                  { Parser.OR        (getPos lexbuf) (* task 1: logical or (||) *) }
   | ';'                   { Parser.SEMICOLON (getPos lexbuf) (* task 1: semicolon (;) *) }
-  | "<-"                  { Parser.LARROW    (getPos lexbuf) (* task 4: generator binding in comprehension (comprehension.fo) *) }
-  | '|'                   { Parser.PIPE      (getPos lexbuf) (* task 4: separator in comprehension (comprehension.fo) *) }
   | "=>"                  { Parser.ARROW     (getPos lexbuf) }
   | "=="                  { Parser.DEQ       (getPos lexbuf) }
   | '='                   { Parser.EQ        (getPos lexbuf) }

@@ -68,7 +68,8 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
                         you need to record it in a new symbol table.
                   - 3rd element of the tuple: should be the optimised expression.
             *)
-            failwith "Unimplemented removeDeadBindingsInExp for Var"
+            false, recordUse name (SymTab.empty()), Var (name, pos) // Task 3
+            
         | Plus (x, y, pos) ->
             let (xios, xuses, x') = removeDeadBindingsInExp x
             let (yios, yuses, y') = removeDeadBindingsInExp y
@@ -118,7 +119,10 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
                         expression `ei` and to propagate its results (in addition
                         to recording the use of `name`).
             *)
-            failwith "Unimplemented removeDeadBindingsInExp for Index"
+            let eio, euses, ei' = removeDeadBindingsInExp ei // Task 3
+            eio,
+            recordUse name euses,
+            Index (name, ei', t, pos)
 
         | Let (Dec (name, def, decpos), body, pos) ->
             (* Task 3, Hints for the `Let` case:
@@ -144,7 +148,16 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
                     Let-expression.
 
             *)
-            failwith "Unimplemented removeDeadBindingsInExp for Let"
+            let defio, defuses, def' = removeDeadBindingsInExp def   // Task 3
+            let bodyio, bodyuses, body' = removeDeadBindingsInExp body // Task 3
+            let bodyuses' = SymTab.remove name bodyuses                // Task 3
+            if not (isUsed name bodyuses) && not defio then            // Task 3: fjern død binding
+                bodyio, bodyuses', body'                               // Task 3: returner kun body
+            else
+                defio || bodyio,                                       // Task 3: behold binding
+                SymTab.combine defuses bodyuses',                      // Task 3
+                Let (Dec (name, def', decpos), body', pos)             // Task 3
+
         | Iota (en, pos) ->
             let (io, uses, en') = removeDeadBindingsInExp en
             (io,

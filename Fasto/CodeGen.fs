@@ -266,7 +266,7 @@ let rec compileExp  (e      : TypedExp)
     ; DIV (place, t1, t2)
     ; J end_label
     ; LABEL err_label
-    ; LI (Ra0, snd pos)
+    ; LI (Ra0, fst pos)
     ; LA (Ra1, "m.DivZero")
     ; J "p.RuntimeError"
     ; LABEL end_label

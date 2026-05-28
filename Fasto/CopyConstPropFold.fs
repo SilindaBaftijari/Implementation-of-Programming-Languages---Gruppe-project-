@@ -80,8 +80,8 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                 (* Not a nested let: handle variable copy, constant copy, or fallback *)
                 let newVtable =
                     match ed' with
-                    | Var (vn, _) -> SymTab.bind name (VarProp vn) vtable
-                    | Constant (c, _) -> SymTab.bind name (ConstProp c) vtable
+                    | Var (vn, _) -> SymTab.remove name vtable |> SymTab.bind name (VarProp vn)
+                    | Constant (c, _) -> SymTab.remove name vtable |> SymTab.bind name (ConstProp c)
                     | _ -> SymTab.remove name vtable   (* shadowing *)
                 let body' = copyConstPropFoldExp newVtable body
                 Let (Dec (name, ed', decpos), body', pos)

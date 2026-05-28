@@ -56,7 +56,7 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                     | Some _ -> freshName candidate
                     | None   -> candidate
                 let x' = freshName x
-                let renameTable = SymTab.bind x (VarProp x') vtable
+                let renameTable = SymTab.remove x vtable |> SymTab.bind x (VarProp x')
                 let e2' = copyConstPropFoldExp renameTable e2
                 let flattened =
                     Let (Dec (x', e1, p1),

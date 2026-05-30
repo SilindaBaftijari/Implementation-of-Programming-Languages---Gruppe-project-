@@ -1,0 +1,8 @@
+fun int writeInt(int x) = write(x)
+
+fun int main() =
+  let a = write(3) in
+  let b = write(4) in
+  let c = write(true) in
+  let d = map(writeInt, {5, 5, 6}) in
+  0

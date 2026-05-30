@@ -68,17 +68,18 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                     original expression. What happens then?
                 *)
             | _ ->
-                (* Not a nested let: handle variable copy, constant copy, or fallback *)
                 let newVtable =
                     match ed' with
-                    | Var (vn, _) -> SymTab.bind name (VarProp vn) (SymTab.remove name vtable)
-                    | Constant (c, _) -> SymTab.bind name (ConstProp c) (SymTab.remove name vtable)
-                    | _ -> SymTab.remove name vtable   (* shadowing *)
+                    | Var (vn, _) -> SymTab.remove name vtable |> SymTab.bind name (VarProp vn)
+                    | Constant (c, _) -> SymTab.remove name vtable |> SymTab.bind name (ConstProp c)
+                    | _ -> SymTab.remove name vtable
+                let newVtable =
+                    SymTab.fromList (
+                        SymTab.toList newVtable
+                        |> List.filter (fun (_, v) -> v <> VarProp name)
+                    )
                 let body' = copyConstPropFoldExp newVtable body
-                Let (Dec (name, ed', decpos), body', pos)
-                (* Or maybe rename the inner bound variable
-                   to some fresh identifier, to avoid inadvertently
-                   shadowing any bindings using `name` in vtable? *)
+                Let (Dec (name, ed', decpos), body', pos)   
 
         | Times (e1, e2, pos) ->
             let e1' = copyConstPropFoldExp vtable e1

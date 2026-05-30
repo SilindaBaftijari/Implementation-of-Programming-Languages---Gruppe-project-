@@ -48,20 +48,11 @@ let rec copyConstPropFoldExp (vtable : VarTable)
         | Let (Dec (name, ed, decpos), body, pos) ->
             let ed' = copyConstPropFoldExp vtable ed
             match ed' with
+             (* Nested let flattening with shadowing fix *)
             | Let (Dec (x, e1, p1), e2, _) ->
-                (* Nested let flattening *)
-                let rec freshName baseName =
-                    let candidate = baseName + "'"
-                    match SymTab.lookup candidate vtable with
-                    | Some _ -> freshName candidate
-                    | None   -> candidate
-                let x' = freshName x
-                let renameTable = SymTab.remove x vtable |> SymTab.bind x (VarProp x')
-                let e2' = copyConstPropFoldExp renameTable e2
-                let flattened =
-                    Let (Dec (x', e1, p1),
-                        Let (Dec (name, e2', decpos), body, pos),
-                        pos)
+                let flattened = Let (Dec (x, e1, p1),
+                                            Let (Dec (name, e2, decpos), body, pos),
+                                            pos)
                 copyConstPropFoldExp vtable flattened
                 (* TODO project task 3:
                     Hint: this has the structure
@@ -80,8 +71,8 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                 (* Not a nested let: handle variable copy, constant copy, or fallback *)
                 let newVtable =
                     match ed' with
-                    | Var (vn, _) -> SymTab.remove name vtable |> SymTab.bind name (VarProp vn)
-                    | Constant (c, _) -> SymTab.remove name vtable |> SymTab.bind name (ConstProp c)
+                    | Var (vn, _) -> SymTab.bind name (VarProp vn) (SymTab.remove name vtable)
+                    | Constant (c, _) -> SymTab.bind name (ConstProp c) (SymTab.remove name vtable)
                     | _ -> SymTab.remove name vtable   (* shadowing *)
                 let body' = copyConstPropFoldExp newVtable body
                 Let (Dec (name, ed', decpos), body', pos)
@@ -107,13 +98,23 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                      x * 0 = ?
             *)
 
+        
+        
+        
         | And (e1, e2, pos) ->
             let e1' = copyConstPropFoldExp vtable e1
-            let e2' = copyConstPropFoldExp vtable e2
-            match (e1', e2') with
-            | Constant (BoolVal a, _), Constant (BoolVal b, _) ->
-                Constant (BoolVal (a && b), pos)
-            | _ -> And (e1', e2', pos)
+            match e1' with
+            | Constant (BoolVal false, _) -> 
+                Constant (BoolVal false, pos)
+            | Constant (BoolVal true, _) -> 
+                copyConstPropFoldExp vtable e2
+            | _ ->
+                let e2' = copyConstPropFoldExp vtable e2
+                match e2' with
+                | Constant (BoolVal true, _) -> 
+                    e1'
+                | _ -> 
+                    And (e1', e2', pos)
             (* TODO project task 3: see above. You may inspire yourself from
                `Or` below, but that only scratches the surface of what's possible *)
 
